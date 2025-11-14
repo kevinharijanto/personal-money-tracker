@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Household {
+  id             String          @id @default(cuid())
+  name           String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  accountGroups  AccountGroup[]
+  categories     Category[]
+  invitations    Invitation[]
+  memberships    Membership[]
+  transferGroups TransferGroup[]
+
+  @@index([name])
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  name            String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  passwordHash    String?
+  emailVerified   DateTime?
+  createdAccounts Account[]      @relation("AccountCreator")
+  ownedAccounts   Account[]      @relation("AccountOwner")
+  invitationsSent Invitation[]   @relation("InvitationsSent")
+  memberships     Membership[]
+  authAccounts    AuthAccount[]
+  sessions        Session[]
+  quickLogins     QuickLogin[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  householdId String
+  role        Role      @default(MEMBER)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId])
+  @@index([householdId])
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  householdId String
+  invitedById String
+  status      InvitationStatus @default(PENDING)
+  token       String           @unique
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  invitedBy   User             @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  household   Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([householdId])
+  @@index([token])
+}
+
+model AccountGroup {
+  id          String           @id @default(cuid())
+  name        String
+  kind        AccountGroupKind @default(CASH)
+  householdId String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  accounts    Account[]
+  household   Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+model Account {
+  id              String        @id @default(cuid())
+  name            String
+  groupId         String
+  currency        String        @default("IDR")
+  startingBalance Decimal       @default(0)
+  isArchived      Boolean       @default(false)
+  scope           AccountScope  @default(HOUSEHOLD)
+  ownerUserId     String?
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdBy       User          @relation("AccountCreator", fields: [createdById], references: [id])
+  ownerUser       User?         @relation("AccountOwner", fields: [ownerUserId], references: [id])
+  group           AccountGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  txns            Transaction[]
+
+  @@unique([groupId, name])
+  @@index([groupId])
+  @@index([ownerUserId])
+  @@index([createdById])
+}
+
+model Category {
+  id          String        @id @default(cuid())
+  name        String
+  householdId String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  txns        Transaction[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+model TransferGroup {
+  id           String        @id @default(cuid())
+  householdId  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+}
+
+model Transaction {
+  id              String         @id @default(cuid())
+  amount          Decimal
+  type            TxnType
+  date            DateTime       @default(now())
+  description     String?
+  accountId       String
+  categoryId      String
+  transferGroupId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  transferGroup   TransferGroup? @relation(fields: [transferGroupId], references: [id])
+  category        Category       @relation(fields: [categoryId], references: [id])
+  account         Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@index([categoryId, date])
+  @@index([date])
+  @@index([transferGroupId])
+}
+
+enum TxnType {
+  INCOME
+  EXPENSE
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum AccountGroupKind {
+  CASH
+  CARD
+  BANK_ACCOUNTS
+  CREDIT_CARDS
+  LOANS
+  OTHER
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum AccountScope {
+  HOUSEHOLD
+  PERSONAL
+}
+
+// Quick login models
+model QuickLogin {
+  id          String   @id @default(cuid())
+  userId      String
+  type        QuickLoginType
+  pinHash     String?  // Hashed PIN for PIN authentication
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+}
+
+enum QuickLoginType {
+  PIN
+  BIOMETRIC
+}
+
+// NextAuth.js required models
+model AuthAccount {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionToken])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
