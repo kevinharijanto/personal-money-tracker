@@ -108,16 +108,18 @@ model Account {
 }
 
 model Category {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
+  type        CategoryType   @default(EXPENSE)
   householdId String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   txns        Transaction[]
 
-  @@unique([householdId, name])
+  @@unique([householdId, name, type])
   @@index([householdId])
+  @@index([type])
 }
 
 model TransferGroup {
@@ -183,6 +185,11 @@ enum InvitationStatus {
 enum AccountScope {
   HOUSEHOLD
   PERSONAL
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
 }
 
 // Quick login models

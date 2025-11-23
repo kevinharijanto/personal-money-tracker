@@ -12,6 +12,14 @@ export const updatePocketSchema = upsertPocketSchema.partial();
 
 export const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
+  type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+});
+
+export const createSubcategorySchema = z.object({
+  name: z.string().min(1).max(100),
+  parentCategoryId: z.string().min(1),
+  // Optional type allows callers to explicitly set or mirror parent type
+  type: z.enum(["INCOME", "EXPENSE"]).optional(),
 });
 
 export const createTxnSchema = z.object({

@@ -2,56 +2,58 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/hybrid-auth';
+import { addCorsHeaders } from '@/lib/cors';
+
+// Handle preflight
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  const res = new NextResponse(null, { status: 200 });
+  return addCorsHeaders(res, origin);
+}
 
 // Setup biometric authentication
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withAuth(async (request: Request, userId: string) => {
+  const { publicKey, credentialId } = await request.json();
 
-    const { publicKey, credentialId } = await request.json();
-    const userId = (session.user as any).id;
-
-    // For biometric authentication, we store the public key and credential ID
-    // In a real implementation, you would use WebAuthn or similar
-    const quickLogin = await prisma.quickLogin.upsert({
-      where: {
-        userId_type: {
-          userId,
-          type: 'BIOMETRIC',
-        },
-      },
-      update: {
-        enabled: true,
-        updatedAt: new Date(),
-      },
-      create: {
+  // For biometric authentication, we store public key and credential ID
+  // In a real implementation, you would use WebAuthn or similar
+  const quickLogin = await prisma.quickLogin.upsert({
+    where: {
+      userId_type: {
         userId,
         type: 'BIOMETRIC',
-        enabled: true,
       },
-    });
+    },
+    update: {
+      enabled: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      userId,
+      type: 'BIOMETRIC',
+      enabled: true,
+    },
+  });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Biometric authentication enabled',
-      credentialId 
-    });
-  } catch (error) {
-    console.error('Error setting up biometric authentication:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
+  const res = NextResponse.json({ 
+    success: true, 
+    message: 'Biometric authentication enabled',
+    credentialId 
+  });
+  return addCorsHeaders(res, request.headers.get('origin'));
+});
 
 // Verify biometric authentication
 export async function PUT(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  
   try {
     const { email, assertion } = await request.json();
     
     if (!email || !assertion) {
-      return NextResponse.json({ error: 'Email and assertion are required' }, { status: 400 });
+      const res = NextResponse.json({ error: 'Email and assertion are required' }, { status: 400 });
+      return addCorsHeaders(res, origin);
     }
 
     // Find user by email
@@ -60,7 +62,8 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      const res = NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return addCorsHeaders(res, origin);
     }
 
     // Find quick login for this user
@@ -73,19 +76,22 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!quickLogin) {
-      return NextResponse.json({ error: 'Biometric authentication not set up for this user' }, { status: 400 });
+      const res = NextResponse.json({ error: 'Biometric authentication not set up for this user' }, { status: 400 });
+      return addCorsHeaders(res, origin);
     }
 
-    // In a real implementation, you would verify the WebAuthn assertion here
+    // In a real implementation, you would verify WebAuthn assertion here
     // For now, we'll simulate successful verification
+    // TODO: Implement actual WebAuthn verification
     const isValid = true; // This would be replaced with actual WebAuthn verification
 
     if (!isValid) {
-      return NextResponse.json({ error: 'Biometric verification failed' }, { status: 401 });
+      const res = NextResponse.json({ error: 'Biometric verification failed' }, { status: 401 });
+      return addCorsHeaders(res, origin);
     }
 
     // Return user info for session creation
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -93,8 +99,10 @@ export async function PUT(request: NextRequest) {
         name: user.name,
       },
     });
+    return addCorsHeaders(res, origin);
   } catch (error) {
     console.error('Error verifying biometric authentication:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const res = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return addCorsHeaders(res, origin);
   }
 }

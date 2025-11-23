@@ -1,22 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { requireSession } from "@/lib/tenancy";
+import { withAuth } from "@/lib/hybrid-auth";
 
 const updateHouseholdSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // Get household details
-  let userId: string;
-  try {
-    ({ userId } = await requireSession());
-  } catch (res: any) {
-    return res;
-  }
-
+export const GET = withAuth(async (req: Request, userId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
+  
   const household = await prisma.household.findFirst({
     where: {
       id: id,
@@ -38,18 +31,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   return NextResponse.json(household);
-}
+});
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  // Update household name (only by household owner)
-  let userId: string;
-  try {
-    ({ userId } = await requireSession());
-  } catch (res: any) {
-    return res;
-  }
-
+export const PUT = withAuth(async (req: Request, userId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
+  
   // Check if user is an owner of this household
   const membership = await prisma.membership.findFirst({
     where: {
@@ -75,4 +61,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   });
 
   return NextResponse.json(household);
-}
+});
+
+export const OPTIONS = withAuth(async (req: Request, userId: string, { params }: { params: Promise<{ id: string }> }) => {
+  // OPTIONS handler for CORS preflight requests
+  return new NextResponse(null, { status: 200 });
+});

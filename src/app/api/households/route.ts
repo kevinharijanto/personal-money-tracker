@@ -1,32 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createHouseholdSchema } from "@/lib/validations";
-import { requireSession } from "@/lib/tenancy";
-export async function GET(req: Request) {
-  // Require an authenticated session; list only households where the user is a member
-  let userId: string;
-  try {
-    ({ userId } = await requireSession());
-  } catch (res: any) {
-    return res;
-  }
+import { withAuth, handleAuthError } from "@/lib/hybrid-auth";
 
+export const GET = withAuth(async (req: Request, userId: string) => {
   const households = await prisma.household.findMany({
     where: { memberships: { some: { userId } } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(households);
-}
+});
 
-export async function POST(req: Request) {
-  // Create a household and add the current user as OWNER
-  let userId: string;
-  try {
-    ({ userId } = await requireSession());
-  } catch (res: any) {
-    return res;
-  }
-
+export const POST = withAuth(async (req: Request, userId: string) => {
   const json = await req.json().catch(() => ({}));
   const parsed = createHouseholdSchema.safeParse(json);
   if (!parsed.success) {
@@ -44,4 +29,9 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(result, { status: 201 });
-}
+});
+
+export const OPTIONS = withAuth(async (req: Request, userId: string) => {
+  // OPTIONS handler for CORS preflight requests
+  return new NextResponse(null, { status: 200 });
+});

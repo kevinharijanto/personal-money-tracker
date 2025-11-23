@@ -3,30 +3,25 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { transferSchemaV2 } from "@/lib/validations";
 import { TxnType, Prisma } from "@prisma/client";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
 async function getOrCreateTransferCategory(householdId: string) {
   const name = "Transfer";
-  const found = await prisma.category.findUnique({
-    where: { householdId_name: { householdId, name } },
+  const type = "EXPENSE"; // Transfers are typically categorized as expenses
+  const found = await prisma.category.findFirst({
+    where: { householdId, name, type },
   });
   if (found) return found;
   return prisma.category.create({
     data: {
       name,
+      type,
       householdId,
     } as any,
   });
 }
 
-export async function POST(req: Request) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const POST = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
   const json = await req.json().catch(() => ({}));
   const parsed = transferSchemaV2.safeParse(json);
   if (!parsed.success) {
@@ -121,4 +116,9 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(result, { status: 201 });
-}
+});
+
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+  // OPTIONS handler for CORS preflight requests
+  return new NextResponse(null, { status: 200 });
+});

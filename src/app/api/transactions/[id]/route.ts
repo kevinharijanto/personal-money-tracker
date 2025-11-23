@@ -2,16 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateTxnSchema, createTxnSchemaV2 } from "@/lib/validations";
 import { TxnType } from "@prisma/client";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const t = await prisma.transaction.findUnique({
     where: { id },
@@ -30,16 +23,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   return NextResponse.json(t);
-}
+});
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const PUT = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const json = await req.json().catch(() => ({}));
   
@@ -79,10 +65,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   if (parsed.data.amount !== undefined) {
     const base = normalize(String(parsed.data.amount));
-    data.amount = isNeg(newType) ? `-${base}` : base;
+    // Only sign if the existing amount is positive (not already signed)
+    const existingIsPositive = !existing.amount.toString().startsWith('-');
+    data.amount = (existingIsPositive && isNeg(newType)) ? `-${base}` : base;
   } else if (parsed.data.type !== undefined) {
     const base = normalize(existing.amount.toString());
-    data.amount = isNeg(parsed.data.type as TxnType) ? `-${base}` : base;
+    // Re-sign the existing amount if type changes
+    const existingIsNegative = existing.amount.toString().startsWith('-');
+    const newIsNegative = isNeg(parsed.data.type as TxnType);
+    
+    if (existingIsNegative && !newIsNegative) {
+      // Convert from negative to positive
+      data.amount = base;
+    } else if (!existingIsNegative && newIsNegative) {
+      // Convert from positive to negative
+      data.amount = `-${base}`;
+    } else {
+      // Keep existing sign
+      data.amount = existing.amount.toString();
+    }
   }
 
   if (parsed.data.type !== undefined) data.type = newType as TxnType;
@@ -124,16 +125,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     data,
   });
   return NextResponse.json(updated);
-}
+});
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+  // OPTIONS handler for CORS preflight requests
+  const origin = req.headers.get('origin');
+  const response = new NextResponse(null, { status: 200 });
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Household-ID');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  
+  return response;
+});
 
+export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const existing = await prisma.transaction.findUnique({
     where: { id },
@@ -152,4 +160,5 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   await prisma.transaction.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});
+

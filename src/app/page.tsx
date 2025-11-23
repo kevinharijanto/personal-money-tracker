@@ -1,10 +1,31 @@
+// src/app/page.tsx
+"use client";
+
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+    if (session) {
+      router.push("/dashboard"); // Authenticated, redirect to dashboard
+    } else {
+      router.push("/auth"); // Not authenticated, redirect to auth
+    }
+  }, [session, status, router]);
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Personal Money Tracker API</h1>
-      <p>The backend API is running successfully.</p>
-      <p>Frontend UI has been removed for custom implementation.</p>
-      <p>Available API endpoints are located at /api/*</p>
+    <div style={{ 
+      display: "flex", 
+      justifyContent: "center", 
+      alignItems: "center", 
+      height: "100vh" 
+    }}>
+      <div>Loading...</div>
     </div>
   );
 }

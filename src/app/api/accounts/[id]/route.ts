@@ -2,15 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updatePocketSchema, updateAccountSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const p = await prisma.account.findFirst({
     where: { id, group: { householdId } },
@@ -30,16 +24,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const balance = base.plus(p.startingBalance).toString();
 
   return NextResponse.json({ ...p, balance });
-}
+});
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const PUT = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const json = await req.json().catch(() => ({}));
   
@@ -132,16 +119,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     data: updateData,
   });
   return NextResponse.json(updated);
-}
+});
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+  // OPTIONS handler for CORS preflight requests
+  const origin = req.headers.get('origin');
+  const response = new NextResponse(null, { status: 200 });
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Household-ID');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  
+  return response;
+});
 
+export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const existing = await prisma.account.findFirst({
     where: { id, group: { householdId } },
@@ -170,4 +164,5 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   await prisma.account.delete({ where: { id } });
   return NextResponse.json({ ok: true });
-}
+});
+

@@ -116,8 +116,6 @@ export const authOptions: NextAuthOptions = {
       if (account) {
         token.provider = account.provider;
       }
-      
-      
       return token;
     },
     async session({ session, token }) {

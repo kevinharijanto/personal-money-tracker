@@ -1,31 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createCategorySchema } from "@/lib/validations";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
-export async function GET(req: Request) {
-  let householdId: string;
-  try {
-    ({ householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+  const url = new URL(req.url);
+  const type = url.searchParams.get("type") as "INCOME" | "EXPENSE" | null;
+  
+  const where: any = { householdId };
+  if (type) where.type = type;
+  
   const categories = await prisma.category.findMany({
-    where: { householdId },
-    orderBy: { name: "asc" },
+    where,
+    orderBy: [{ type: "asc" }, { name: "asc" }],
   });
   return NextResponse.json(categories);
-}
+});
 
-export async function POST(req: Request) {
-  let householdId: string;
-  try {
-    ({ householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const POST = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
   const json = await req.json().catch(() => ({}));
   const parsed = createCategorySchema.safeParse(json);
   if (!parsed.success) {
@@ -36,6 +28,7 @@ export async function POST(req: Request) {
     const category = await prisma.category.create({
       data: {
         name: parsed.data.name,
+        type: parsed.data.type,
         householdId,
       },
     });
@@ -49,4 +42,19 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: "Failed to create category" }, { status: 500 });
   }
-}
+});
+
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+  // OPTIONS handler for CORS preflight requests
+  const origin = req.headers.get('origin');
+  const response = new NextResponse(null, { status: 200 });
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Household-ID');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  
+  return response;
+});
+

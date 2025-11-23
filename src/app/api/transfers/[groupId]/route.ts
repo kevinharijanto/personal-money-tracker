@@ -1,17 +1,10 @@
 // app/api/transfers/[groupId]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
 // Return both legs of a transfer, plus a small summary
-export async function GET(req: Request, { params }: { params: Promise<{ groupId: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ groupId: string }> }) => {
   const { groupId } = await params;
 
   // Enforce tenancy via TransferGroup.householdId
@@ -68,16 +61,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ groupId:
   };
 
   return NextResponse.json({ summary, legs: txns });
-}
+});
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ groupId: string }> }) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
-
+export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ groupId: string }> }) => {
   const { groupId } = await params;
 
   // Enforce tenancy via TransferGroup.householdId
@@ -109,4 +95,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ group
 
   await prisma.transaction.deleteMany({ where: { transferGroupId: groupId } });
   return NextResponse.json({ ok: true });
-}
+});
+
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ groupId: string }> }) => {
+  // OPTIONS handler for CORS preflight requests
+  return new NextResponse(null, { status: 200 });
+});

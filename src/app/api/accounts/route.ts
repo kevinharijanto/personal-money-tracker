@@ -2,20 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { upsertPocketSchema, upsertAccountSchema } from "@/lib/validations";
-import { requireAuthAndTenancy } from "@/lib/tenancy";
+import { withAuthAndTenancy } from "@/lib/hybrid-auth";
 
 // NOTE: "pockets" endpoint now proxies to Accounts for backward compatibility.
 // - Pocket => Account
 // - Bank   => AccountGroup
 // Tenancy: requires X-Household-ID header.
 
-export async function GET(req: Request) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
 
   const accounts = await prisma.account.findMany({
     where: { group: { householdId } },
@@ -41,15 +35,9 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json(results);
-}
+});
 
-export async function POST(req: Request) {
-  let userId: string, householdId: string;
-  try {
-    ({ userId, householdId } = await requireAuthAndTenancy(req));
-  } catch (res: any) {
-    return res;
-  }
+export const POST = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
 
   const json = await req.json().catch(() => ({}));
 
@@ -109,4 +97,19 @@ export async function POST(req: Request) {
     },
   });
   return NextResponse.json(account, { status: 201 });
-}
+});
+
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+  // OPTIONS handler for CORS preflight requests
+  const origin = req.headers.get('origin');
+  const response = new NextResponse(null, { status: 200 });
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Household-ID');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  
+  return response;
+});
+
