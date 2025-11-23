@@ -116,7 +116,6 @@ model Category {
   updatedAt   DateTime       @updatedAt
   household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   txns        Transaction[]
-
   @@unique([householdId, name, type])
   @@index([householdId])
   @@index([type])
@@ -167,6 +166,7 @@ enum AccountGroupKind {
   BANK_ACCOUNTS
   CREDIT_CARDS
   LOANS
+  INVESTMENTS
   OTHER
 }
 

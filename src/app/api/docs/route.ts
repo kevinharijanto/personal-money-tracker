@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiDocsGenerator, zodToOpenApi } from "@/lib/api-docs";
-import { createTxnSchemaV2, createCategorySchema, createSubcategorySchema, upsertAccountSchema, createHouseholdSchema } from "@/lib/validations";
+import { createTxnSchemaV2, createCategorySchema, upsertAccountSchema, createHouseholdSchema } from "@/lib/validations";
 import { withRateLimit, RateLimitConfigs } from "@/lib/rate-limit";
 import { withCache, CacheConfigs } from "@/lib/cache";
 
@@ -10,7 +10,6 @@ const docsGenerator = ApiDocsGenerator.getInstance();
 // Register Zod schemas
 docsGenerator.registerSchema('TransactionCreate', zodToOpenApi(createTxnSchemaV2));
 docsGenerator.registerSchema('CategoryCreate', zodToOpenApi(createCategorySchema));
-docsGenerator.registerSchema('SubCategoryCreate', zodToOpenApi(createSubcategorySchema));
 docsGenerator.registerSchema('AccountCreate', zodToOpenApi(upsertAccountSchema));
 docsGenerator.registerSchema('HouseholdCreate', zodToOpenApi(createHouseholdSchema));
 
@@ -136,7 +135,7 @@ docsGenerator.register({
           date: '2023-01-01T00:00:00.000Z',
           description: 'Grocery shopping',
           accountId: 'acc_123',
-          categoryId: 'cat_123',
+          categoryId: 'cat_123'
         },
         meta: {
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -340,232 +339,6 @@ docsGenerator.register({
         },
       },
     },
-  },
-  security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
-});
-
-docsGenerator.register({
-  path: '/api/categories/{categoryId}/subcategories',
-  method: 'GET',
-  summary: 'List subcategories',
-  description: 'Retrieve all subcategories that belong to a parent category in the household',
-  tags: ['Subcategories'],
-  parameters: [
-    {
-      name: 'categoryId',
-      in: 'path',
-      description: 'Parent category ID',
-      required: true,
-      type: 'string',
-    },
-  ],
-  responses: {
-    '200': {
-      description: 'Subcategories retrieved successfully',
-      example: {
-        success: true,
-        data: [
-          {
-            id: 'subcat_123',
-            name: 'Restaurants',
-            type: 'EXPENSE',
-            parentCategoryId: 'cat_456',
-            householdId: 'household_123',
-          },
-        ],
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-    '401': { $ref: '#/components/responses/Unauthorized' },
-    '403': { $ref: '#/components/responses/Forbidden' },
-    '404': { $ref: '#/components/responses/NotFound' },
-  },
-  security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
-});
-
-docsGenerator.register({
-  path: '/api/categories/{categoryId}/subcategories',
-  method: 'POST',
-  summary: 'Create subcategory',
-  description: 'Create a new subcategory under a parent category; type should mirror the parent category',
-  tags: ['Subcategories'],
-  parameters: [
-    {
-      name: 'categoryId',
-      in: 'path',
-      description: 'Parent category ID',
-      required: true,
-      type: 'string',
-    },
-  ],
-  requestBody: {
-    description: 'Subcategory data',
-    required: true,
-    contentType: 'application/json',
-    schema: { $ref: '#/components/schemas/SubCategoryCreate' },
-    example: {
-      name: 'Dining Out',
-      type: 'EXPENSE',
-    },
-  },
-  responses: {
-    '201': {
-      description: 'Subcategory created successfully',
-      example: {
-        success: true,
-        data: {
-          id: 'subcat_789',
-          name: 'Dining Out',
-          type: 'EXPENSE',
-          parentCategoryId: 'cat_456',
-          householdId: 'household_123',
-        },
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-    '400': { $ref: '#/components/responses/BadRequest' },
-    '401': { $ref: '#/components/responses/Unauthorized' },
-    '403': { $ref: '#/components/responses/Forbidden' },
-    '404': { $ref: '#/components/responses/NotFound' },
-    '409': {
-      description: 'Subcategory name already exists under this category',
-      example: {
-        success: false,
-        error: {
-          code: 'CONFLICT',
-          message: 'Subcategory name already exists under this category',
-        },
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-  },
-  security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
-});
-
-docsGenerator.register({
-  path: '/api/subcategories/{id}',
-  method: 'GET',
-  summary: 'Get subcategory detail',
-  description: 'Retrieve a specific subcategory by ID within the household',
-  tags: ['Subcategories'],
-  parameters: [
-    {
-      name: 'id',
-      in: 'path',
-      description: 'Subcategory ID',
-      required: true,
-      type: 'string',
-    },
-  ],
-  responses: {
-    '200': {
-      description: 'Subcategory retrieved successfully',
-      example: {
-        success: true,
-        data: {
-          id: 'subcat_123',
-          name: 'Restaurants',
-          type: 'EXPENSE',
-          parentCategoryId: 'cat_456',
-          householdId: 'household_123',
-        },
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-    '401': { $ref: '#/components/responses/Unauthorized' },
-    '403': { $ref: '#/components/responses/Forbidden' },
-    '404': { $ref: '#/components/responses/NotFound' },
-  },
-  security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
-});
-
-docsGenerator.register({
-  path: '/api/subcategories/{id}',
-  method: 'PUT',
-  summary: 'Update subcategory',
-  description: 'Update the name or type of an existing subcategory',
-  tags: ['Subcategories'],
-  parameters: [
-    {
-      name: 'id',
-      in: 'path',
-      description: 'Subcategory ID',
-      required: true,
-      type: 'string',
-    },
-  ],
-  requestBody: {
-    description: 'Updated subcategory data',
-    required: true,
-    contentType: 'application/json',
-    schema: { $ref: '#/components/schemas/SubCategoryCreate' },
-    example: {
-      name: 'Food & Dining',
-      type: 'EXPENSE',
-    },
-  },
-  responses: {
-    '200': {
-      description: 'Subcategory updated successfully',
-      example: {
-        success: true,
-        data: {
-          id: 'subcat_123',
-          name: 'Food & Dining',
-          type: 'EXPENSE',
-          parentCategoryId: 'cat_456',
-          householdId: 'household_123',
-        },
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-    '400': { $ref: '#/components/responses/BadRequest' },
-    '401': { $ref: '#/components/responses/Unauthorized' },
-    '403': { $ref: '#/components/responses/Forbidden' },
-    '404': { $ref: '#/components/responses/NotFound' },
-  },
-  security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
-});
-
-docsGenerator.register({
-  path: '/api/subcategories/{id}',
-  method: 'DELETE',
-  summary: 'Delete subcategory',
-  description: 'Remove a subcategory from the household',
-  tags: ['Subcategories'],
-  parameters: [
-    {
-      name: 'id',
-      in: 'path',
-      description: 'Subcategory ID',
-      required: true,
-      type: 'string',
-    },
-  ],
-  responses: {
-    '200': {
-      description: 'Subcategory deleted successfully',
-      example: {
-        success: true,
-        data: { deleted: true, id: 'subcat_123' },
-        meta: {
-          timestamp: '2023-01-01T00:00:00.000Z',
-        },
-      },
-    },
-    '401': { $ref: '#/components/responses/Unauthorized' },
-    '403': { $ref: '#/components/responses/Forbidden' },
-    '404': { $ref: '#/components/responses/NotFound' },
   },
   security: [{ type: 'bearer' }, { type: 'apiKey', in: 'header', name: 'X-Household-ID' }],
 });

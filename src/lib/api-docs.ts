@@ -252,10 +252,6 @@ export class ApiDocsGenerator {
           description: 'Category management endpoints',
         },
         {
-          name: 'Subcategories',
-          description: 'Nested category management endpoints',
-        },
-        {
           name: 'Transfers',
           description: 'Money transfer endpoints',
         },
