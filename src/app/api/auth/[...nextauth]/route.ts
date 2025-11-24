@@ -1,19 +1,17 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/auth";
 import { addCorsHeaders } from "@/lib/cors";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 const handler = NextAuth(authOptions);
 
-// Wrap the handler to add CORS headers
 const corsHandler = async (
-  req: NextRequest,
-  context?: { params?: { nextauth: string[] } },
+  ...args: Parameters<typeof handler>
 ) => {
+  const [req] = args;
   const origin = req.headers.get("origin");
-  const response = await handler(req, context);
+  const response = await handler(...args);
 
-  // Convert response to NextResponse if it's not already
   const nextResponse =
     response instanceof NextResponse
       ? response
