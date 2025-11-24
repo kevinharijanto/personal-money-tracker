@@ -242,61 +242,85 @@ export const RateLimitUtils = {
    * Create a rate limiter for specific user
    */
   forUser(userId: string, options: RateLimitOptions) {
-    return withRateLimit({
-      ...options,
-      keyGenerator: (req) => `user:${userId}:${new URL(req.url).pathname}`,
-    });
+    return (
+      handler: (req: Request, ...args: any[]) => Promise<NextResponse>
+    ) =>
+      withRateLimit(
+        {
+          ...options,
+          keyGenerator: (req) => `user:${userId}:${new URL(req.url).pathname}`,
+        },
+        handler,
+      );
   },
   
   /**
    * Create a rate limiter for IP address
    */
   forIP(options: RateLimitOptions) {
-    return withRateLimit({
-      ...options,
-      keyGenerator: (req) => {
-        const ip = req.headers.get('x-forwarded-for') || 
-                  req.headers.get('x-real-ip') || 
-                  'unknown';
-        return `ip:${ip}:${new URL(req.url).pathname}`;
-      },
-    });
+    return (
+      handler: (req: Request, ...args: any[]) => Promise<NextResponse>
+    ) =>
+      withRateLimit(
+        {
+          ...options,
+          keyGenerator: (req) => {
+            const ip =
+              req.headers.get("x-forwarded-for") ||
+              req.headers.get("x-real-ip") ||
+              "unknown";
+            return `ip:${ip}:${new URL(req.url).pathname}`;
+          },
+        },
+        handler,
+      );
   },
   
   /**
    * Create a rate limiter for specific endpoint
    */
   forEndpoint(endpoint: string, options: RateLimitOptions) {
-    return withRateLimit({
-      ...options,
-      keyGenerator: (req) => `endpoint:${endpoint}:${req.headers.get('authorization') || 'anonymous'}`,
-    });
+    return (
+      handler: (req: Request, ...args: any[]) => Promise<NextResponse>
+    ) =>
+      withRateLimit(
+        {
+          ...options,
+          keyGenerator: (req) =>
+            `endpoint:${endpoint}:${req.headers.get("authorization") || "anonymous"}`,
+        },
+        handler,
+      );
   },
   
   /**
    * Create a progressive rate limiter (increases restrictions over time)
    */
   progressive(baseOptions: RateLimitOptions) {
-    return withRateLimit({
-      ...baseOptions,
-      keyGenerator: (req) => {
-        const key = generateDefaultKey(req);
-        const limiter = MemoryRateLimiter.getInstance();
-        
-        // Get current request count
-        const current = limiter.isAllowed(key, {
-          windowMs: baseOptions.windowMs,
-          maxRequests: baseOptions.maxRequests,
-        });
-        
-        // If approaching limit, make it stricter
-        if (current.remaining < baseOptions.maxRequests * 0.2) {
-          return `${key}:strict`;
-        }
-        
-        return key;
-      },
-    });
+    return (
+      handler: (req: Request, ...args: any[]) => Promise<NextResponse>
+    ) =>
+      withRateLimit(
+        {
+          ...baseOptions,
+          keyGenerator: (req) => {
+            const key = generateDefaultKey(req);
+            const limiter = MemoryRateLimiter.getInstance();
+
+            const current = limiter.isAllowed(key, {
+              windowMs: baseOptions.windowMs,
+              maxRequests: baseOptions.maxRequests,
+            });
+
+            if (current.remaining < baseOptions.maxRequests * 0.2) {
+              return `${key}:strict`;
+            }
+
+            return key;
+          },
+        },
+        handler,
+      );
   },
 };
 
