@@ -3,6 +3,9 @@ import { ApiDocsGenerator, zodToOpenApi } from "@/lib/api-docs";
 import { createTxnSchemaV2, createCategorySchema, upsertAccountSchema, createHouseholdSchema } from "@/lib/validations";
 import { withRateLimit, RateLimitConfigs } from "@/lib/rate-limit";
 import { withCache, CacheConfigs } from "@/lib/cache";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Register schemas for documentation
 const docsGenerator = ApiDocsGenerator.getInstance();

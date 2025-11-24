@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);

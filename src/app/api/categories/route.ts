@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createCategorySchema } from "@/lib/validations";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
   const url = new URL(req.url);
@@ -57,4 +60,3 @@ export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, h
   
   return response;
 });
-

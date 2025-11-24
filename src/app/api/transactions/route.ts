@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { createTxnSchema, createTxnSchemaV2 } from "@/lib/validations";
 import { TxnType } from "@prisma/client";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 /**
  * Transactions API (v2-ready)

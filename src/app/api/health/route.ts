@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { createSuccessResponse, createErrorResponse, API_ERROR_CODES } from "@/lib/api-response";
 import { withRateLimit, RateLimitConfigs } from "@/lib/rate-limit";
 import { withLogging, LoggingConfigs } from "@/lib/request-logger";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 interface HealthCheckResult {
   status: 'healthy' | 'unhealthy' | 'degraded';

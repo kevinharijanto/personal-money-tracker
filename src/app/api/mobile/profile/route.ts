@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
 import { addCorsHeaders } from "@/lib/cors";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Handle preflight
 export async function OPTIONS(req: NextRequest) {

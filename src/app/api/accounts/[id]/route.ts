@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { updatePocketSchema, updateAccountSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
@@ -165,4 +168,3 @@ export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, ho
   await prisma.account.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 });
-

@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { addCorsHeaders } from "@/lib/cors";
 import bcrypt from "bcryptjs";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Handle preflight
 export async function OPTIONS(req: NextRequest) {

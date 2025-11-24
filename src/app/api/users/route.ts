@@ -5,6 +5,9 @@ import { hashWithPepper } from "@/lib/security";
 import { z } from "zod";
 import { withAuth } from "@/lib/hybrid-auth";
 import { addCorsHeaders } from "@/lib/cors";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 const signupSchema = z.object({
   email: z.string().email(),

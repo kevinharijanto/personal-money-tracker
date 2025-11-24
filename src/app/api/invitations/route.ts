@@ -4,6 +4,9 @@ import { z } from "zod";
 import crypto from "crypto";
 import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 const inviteSchema = z.object({
   email: z.string().email(),

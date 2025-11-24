@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashWithPepper } from "@/lib/security";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);

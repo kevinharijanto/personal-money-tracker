@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createHouseholdSchema } from "@/lib/validations";
 import { withAuth, handleAuthError } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export const GET = withAuth(async (req: Request, userId: string) => {
   const households = await prisma.household.findMany({

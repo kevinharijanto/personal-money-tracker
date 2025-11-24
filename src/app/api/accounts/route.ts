@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { upsertPocketSchema, upsertAccountSchema } from "@/lib/validations";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // NOTE: "pockets" endpoint now proxies to Accounts for backward compatibility.
 // - Pocket => Account
@@ -112,4 +115,3 @@ export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, h
   
   return response;
 });
-

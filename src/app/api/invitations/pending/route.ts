@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 export const GET = withAuth(async (req: Request, userId: string) => {
   // Get the current user's email

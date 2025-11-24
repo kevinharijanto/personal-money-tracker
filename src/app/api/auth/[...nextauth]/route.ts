@@ -2,6 +2,9 @@ import NextAuth from "next-auth";
 import { authOptions } from "@/auth";
 import { addCorsHeaders } from "@/lib/cors";
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 const handler = NextAuth(authOptions);
 

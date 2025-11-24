@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { hashWithPepper, compareWithPepper } from '@/lib/security';
 import { withAuth } from '@/lib/hybrid-auth';
 import { addCorsHeaders } from '@/lib/cors';
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Handle preflight
 export async function OPTIONS(req: NextRequest) {

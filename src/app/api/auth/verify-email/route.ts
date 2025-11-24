@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addCorsHeaders } from "@/lib/cors";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Handle preflight
 export async function OPTIONS(req: NextRequest) {

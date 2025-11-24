@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { createAccountGroupSchema } from "@/lib/validations";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // NOTE: "banks" endpoint now proxies to Account Groups for backward compatibility.
 // - Bank => AccountGroup

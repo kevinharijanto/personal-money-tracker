@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withAuth } from '@/lib/hybrid-auth';
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 // Verify quick login for NextAuth integration
 export const POST = withAuth(async (request: Request, userId: string) => {

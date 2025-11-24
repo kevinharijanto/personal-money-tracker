@@ -5,6 +5,9 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/hybrid-auth";
 import { addCorsHeaders } from "@/lib/cors";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 const acceptInvitationSchema = z.object({
   token: z.string().min(1),

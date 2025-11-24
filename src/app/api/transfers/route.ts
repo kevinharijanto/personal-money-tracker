@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { transferSchemaV2 } from "@/lib/validations";
 import { TxnType, Prisma } from "@prisma/client";
 import { withAuthAndTenancy } from "@/lib/hybrid-auth";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
+
 
 async function getOrCreateTransferCategory(householdId: string) {
   const name = "Transfer";
