@@ -8,7 +8,7 @@ const handler = NextAuth(authOptions);
 // Wrap the handler to add CORS headers
 const corsHandler = async (
   req: NextRequest,
-  context: { params: { nextauth: string[] } },
+  context?: { params?: { nextauth: string[] } },
 ) => {
   const origin = req.headers.get("origin");
   const response = await handler(req, context);
