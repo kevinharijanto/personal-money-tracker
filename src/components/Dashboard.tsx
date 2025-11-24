@@ -53,6 +53,7 @@ type TransactionPayload = {
   description?: string;
 };
 
+type ThemePaletteProps = ThemePalette;
 type TabKey = "dashboard" | "accounts" | "transactions";
 type ExpenseRange = "day" | "week" | "month" | "year";
 
@@ -604,7 +605,7 @@ function SummaryTile({
   label: string;
   value: string;
   helper?: string;
-  palette: ThemePalette;
+  palette: ThemePaletteProps;
 }) {
   return (
     <div
@@ -734,7 +735,7 @@ type RecentTransactionsProps = {
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  palette: ThemePalette;
+  palette: ThemePaletteProps;
 };
 
 function RecentTransactions({
@@ -875,7 +876,7 @@ function RecentTransactions({
 }
 
 type ExpenseReportProps = {
-  palette: ThemePalette;
+  palette: ThemePaletteProps;
   expenseRange: ExpenseRange;
   onRangeChange: (value: ExpenseRange) => void;
   report: { total: number; slices: ExpenseSlice[] };
@@ -1044,7 +1045,7 @@ function ExpenseReport({
 const getGradient = (
   slices: ExpenseSlice[],
   total: number,
-  palette: ThemePalette,
+  palette: ThemePaletteProps,
 ) => {
   if (!slices.length || total === 0) {
     return palette.surfaceMuted;
