@@ -19,32 +19,44 @@ export const GET = withAuthAndTenancy(async (req: Request, userId: string, house
     orderBy: { createdAt: "desc" },
   });
 
-  // Filter accounts the user can access and calculate balances
-  const filtered = await Promise.all(groups.map(async (g) => {
-    // Filter accounts based on scope
-    const visibleAccounts = g.accounts.filter(
-      (a) => a.scope === "HOUSEHOLD" || (a.scope === "PERSONAL" && a.ownerUserId === userId)
-    );
+  const visibleAccounts = groups.flatMap((group) =>
+    group.accounts.filter(
+      (account) =>
+        account.scope === "HOUSEHOLD" ||
+        (account.scope === "PERSONAL" && account.ownerUserId === userId),
+    ),
+  );
 
-    // Calculate balance for each account
-    const accountsWithBalance = await Promise.all(visibleAccounts.map(async (a) => {
-      const sum = await prisma.transaction.aggregate({
+  const accountIds = visibleAccounts.map((account) => account.id);
+  const balances = accountIds.length
+    ? await prisma.transaction.groupBy({
+        by: ["accountId"],
         _sum: { amount: true },
-        where: { accountId: a.id },
+        where: { accountId: { in: accountIds } },
+      })
+    : [];
+
+  const balanceMap = new Map(
+    balances.map((row) => [row.accountId, row._sum.amount ?? new Prisma.Decimal(0)]),
+  );
+
+  const enhanced = groups.map((group) => {
+    const accounts = group.accounts
+      .filter(
+        (account) =>
+          account.scope === "HOUSEHOLD" ||
+          (account.scope === "PERSONAL" && account.ownerUserId === userId),
+      )
+      .map((account) => {
+        const base = balanceMap.get(account.id) ?? new Prisma.Decimal(0);
+        const balance = base.plus(account.startingBalance).toString();
+        return { ...account, balance };
       });
-      const base = sum._sum.amount ?? new Prisma.Decimal(0);
-      const balance = base.plus(a.startingBalance).toString();
-      
-      return { ...a, balance };
-    }));
 
-    return {
-      ...g,
-      accounts: accountsWithBalance,
-    };
-  }));
+    return { ...group, accounts };
+  });
 
-  return NextResponse.json(filtered);
+  return NextResponse.json(enhanced);
 });
 
 export const POST = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {

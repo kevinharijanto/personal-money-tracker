@@ -119,17 +119,22 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
 
   const { amount, type, accountId, categoryId, description, date } = payload!;
 
-  // Validate account exists within the requesting household and is accessible
-  const account = await prisma.account.findFirst({
-    where: {
-      id: accountId,
-      AND: [
-        { group: { householdId } },
-        { OR: [{ scope: "HOUSEHOLD" }, { scope: "PERSONAL", ownerUserId: userId }] },
-      ],
-    },
-    include: { group: true },
-  });
+  const [account, category] = await Promise.all([
+    prisma.account.findFirst({
+      where: {
+        id: accountId,
+        AND: [
+          { group: { householdId } },
+          { OR: [{ scope: "HOUSEHOLD" }, { scope: "PERSONAL", ownerUserId: userId }] },
+        ],
+      },
+      include: { group: true },
+    }),
+    prisma.category.findFirst({
+      where: { id: categoryId, householdId },
+    }),
+  ]);
+
   if (!account) {
     return NextResponse.json(
       { error: "Account not found or not accessible in this household" },
@@ -137,10 +142,6 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
     );
   }
 
-  // Validate category belongs to this household
-  const category = await prisma.category.findFirst({
-    where: { id: categoryId, householdId },
-  });
   if (!category) {
     return NextResponse.json({ error: "Category not found in this household" }, { status: 400 });
   }
