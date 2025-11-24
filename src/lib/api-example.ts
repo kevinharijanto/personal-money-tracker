@@ -18,6 +18,11 @@ import { withLogging, LoggingConfigs } from "./request-logger";
 import { withCache, CacheConfigs } from "./cache";
 import { parsePaginationParams, createPaginationMeta } from "./pagination";
 import { TransactionHelper } from "./db-transaction";
+import { z } from "zod";
+
+const BatchTransactionsSchema = z.object({
+  transactions: z.array(z.any()).min(1).max(100),
+});
 
 /**
  * Enhanced GET /api/transactions example
@@ -216,18 +221,7 @@ export const BATCH_CREATE = withRateLimit(
     LoggingConfigs.api,
     withValidation(
       {
-        body: {
-          type: 'object',
-          properties: {
-            transactions: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/TransactionCreate' },
-              minItems: 1,
-              maxItems: 100,
-            },
-          },
-          required: ['transactions'],
-        },
+        body: BatchTransactionsSchema,
         headers: ApiSchemas.headers,
       },
       async (req: Request, validated, userId: string, householdId: string) => {
