@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/auth";
 import { addCorsHeaders } from "@/lib/cors";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
@@ -11,7 +11,7 @@ const handler = NextAuth(authOptions);
 const corsHandler = async (
   ...args: Parameters<typeof handler>
 ) => {
-  const [req] = args;
+  const [req] = args as [NextRequest, ...unknown[]];
   const origin = req.headers.get("origin");
   const response = await handler(...args);
 
