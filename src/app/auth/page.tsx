@@ -1,270 +1,198 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useThemePreference } from "@/hooks/useThemePreference";
 
 export default function AuthPage() {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { theme, palette, toggleTheme } = useThemePreference();
 
-  // Form states for sign in
-  const [signInEmail, setSignInEmail] = useState("");
-  const [signInPassword, setSignInPassword] = useState("");
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/dashboard");
+    }
+  }, [session, status, router]);
 
-  // Form states for sign up
-  const [signUpEmail, setSignUpEmail] = useState("");
-  const [signUpPassword, setSignUpPassword] = useState("");
-  const [signUpName, setSignUpName] = useState("");
-  const [householdName, setHouseholdName] = useState("");
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
     setError("");
 
     try {
       const result = await signIn("credentials", {
-        email: signInEmail,
-        password: signInPassword,
+        email,
+        password,
         redirect: false,
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
-      } else {
-        router.push("/dashboard");
+        setError("Invalid email or password. Please try again.");
+        return;
       }
-    } catch (error) {
-      setError("An error occurred during sign in");
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in right now. Please try again later.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: signUpEmail,
-          password: signUpPassword,
-          name: signUpName,
-          householdName: householdName,
-        }),
-      });
-
-      if (response.ok) {
-        // After successful registration, sign in the user
-        const result = await signIn("credentials", {
-          email: signUpEmail,
-          password: signUpPassword,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          setError("Account created but failed to sign in");
-        } else {
-          router.push("/dashboard");
-        }
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to create account");
-      }
-    } catch (error) {
-      setError("An error occurred during sign up");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const formDisabled = loading || status === "loading";
 
   return (
-    <div style={{ 
-      maxWidth: "400px", 
-      margin: "50px auto", 
-      padding: "20px",
-      border: "1px solid #ddd",
-      borderRadius: "8px",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-    }}>
-      <h1 style={{ textAlign: "center", marginBottom: "20px" }}>
-        {isSignUp ? "Sign Up" : "Sign In"}
-      </h1>
-
-      {error && (
-        <div style={{ 
-          color: "red", 
-          marginBottom: "15px", 
-          padding: "10px",
-          backgroundColor: "#ffebee",
-          borderRadius: "4px",
-          textAlign: "center"
-        }}>
-          {error}
-        </div>
-      )}
-
-      {!isSignUp ? (
-        // Sign In Form
-        <form onSubmit={handleSignIn}>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Email</label>
-            <input
-              type="email"
-              value={signInEmail}
-              onChange={(e) => setSignInEmail(e.target.value)}
-              required
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Password</label>
-            <input
-              type="password"
-              value={signInPassword}
-              onChange={(e) => setSignInPassword(e.target.value)}
-              required
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "10px",
-              backgroundColor: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1
-            }}
-          >
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
-      ) : (
-        // Sign Up Form
-        <form onSubmit={handleSignUp}>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Name</label>
-            <input
-              type="text"
-              value={signUpName}
-              onChange={(e) => setSignUpName(e.target.value)}
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Email</label>
-            <input
-              type="email"
-              value={signUpEmail}
-              onChange={(e) => setSignUpEmail(e.target.value)}
-              required
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Password</label>
-            <input
-              type="password"
-              value={signUpPassword}
-              onChange={(e) => setSignUpPassword(e.target.value)}
-              required
-              minLength={8}
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Household Name</label>
-            <input
-              type="text"
-              value={householdName}
-              onChange={(e) => setHouseholdName(e.target.value)}
-              required
-              placeholder="e.g., My Family"
-              style={{ 
-                width: "100%", 
-                padding: "8px",
-                border: "1px solid #ddd",
-                borderRadius: "4px"
-              }}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "10px",
-              backgroundColor: "#2196F3",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1
-            }}
-          >
-            {loading ? "Creating Account..." : "Sign Up"}
-          </button>
-        </form>
-      )}
-
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
-        {isSignUp ? "Already have an account?" : "Don't have an account?"}
-        <button
-          type="button"
-          onClick={() => {
-            setIsSignUp(!isSignUp);
-            setError("");
-          }}
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        background: palette.background,
+        color: palette.text,
+        transition: "background 0.3s ease, color 0.3s ease",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          borderRadius: "24px",
+          padding: "32px",
+          background: palette.card,
+          color: palette.text,
+          boxShadow:
+            theme === "dark"
+              ? "0 20px 35px rgba(0,0,0,0.6)"
+              : "0 25px 50px -12px rgba(15,23,42,0.25)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "18px",
+        }}
+      >
+        <div
           style={{
-            background: "none",
-            border: "none",
-            color: "#2196F3",
-            textDecoration: "underline",
-            cursor: "pointer",
-            marginLeft: "5px"
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "8px",
           }}
         >
-          {isSignUp ? "Sign In" : "Sign Up"}
-        </button>
+          <div>
+            <p style={{ margin: 0, color: palette.subtle, fontWeight: 600 }}>
+              Personal Money Tracker
+            </p>
+            <h1 style={{ margin: "6px 0 4px" }}>Sign in to the web console</h1>
+            <p style={{ margin: 0, color: palette.muted }}>
+              Login only. Account creation lives in the Flutter mobile app.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            style={{
+              borderRadius: "999px",
+              border: `1px solid ${palette.gridBorder}`,
+              background: palette.card,
+              color: palette.text,
+              padding: "6px 12px",
+              cursor: "pointer",
+            }}
+          >
+            {theme === "dark" ? "Light" : "Dark"}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            style={{
+              padding: "12px",
+              borderRadius: "12px",
+              border: `1px solid ${palette.warningBorder}`,
+              background: palette.warningBg,
+              color: palette.danger,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSignIn}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
+          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+              style={{
+                padding: "12px 14px",
+                borderRadius: "12px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              autoComplete="current-password"
+              placeholder="********"
+              style={{
+                padding: "12px 14px",
+                borderRadius: "12px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={formDisabled}
+            style={{
+              marginTop: "8px",
+              padding: "14px",
+              borderRadius: "16px",
+              border: "none",
+              backgroundColor: formDisabled ? palette.buttonMuted : palette.button,
+              color: palette.buttonText,
+              fontWeight: 600,
+              cursor: formDisabled ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <p style={{ margin: "4px 0 0", color: palette.subtle, fontSize: "14px" }}>
+          Need an account? Use the Flutter mobile app to onboard and invite your
+          household.
+        </p>
       </div>
     </div>
   );
