@@ -19,10 +19,12 @@ import { withCache, CacheConfigs } from "./cache";
 import { parsePaginationParams, createPaginationMeta } from "./pagination";
 import { TransactionHelper } from "./db-transaction";
 import { z } from "zod";
+import { createTxnSchemaV2 } from "./validations";
 
 const BatchTransactionsSchema = z.object({
-  transactions: z.array(z.any()).min(1).max(100),
+  transactions: z.array(createTxnSchemaV2).min(1).max(100),
 });
+type BatchTransaction = z.infer<typeof createTxnSchemaV2>;
 
 /**
  * Enhanced GET /api/transactions example
@@ -226,11 +228,11 @@ export const BATCH_CREATE = withRateLimit(
       },
       async (req: Request, validated, userId: string, householdId: string) => {
         try {
-          const { transactions } = validated.body;
+          const { transactions } = validated.body as { transactions: BatchTransaction[] };
 
           // Use batch transaction helper
           const results = await TransactionHelper.batch(
-            transactions.map(txn => 
+            transactions.map((txn: BatchTransaction) => 
               async (tx) => {
                 // Validation logic similar to single transaction
                 const account = await tx.account.findFirst({
