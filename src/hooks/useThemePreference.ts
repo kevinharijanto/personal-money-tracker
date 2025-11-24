@@ -46,7 +46,7 @@ export const palettes = {
 } as const;
 
 export type ThemeName = keyof typeof palettes;
-export type ThemePalette = (typeof palettes)["light"];
+export type ThemePalette = (typeof palettes)[ThemeName];
 
 export function useThemePreference() {
   const [theme, setTheme] = useState<ThemeName>("light");
