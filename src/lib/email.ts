@@ -127,3 +127,42 @@ export async function sendInvitationEmail(params: {
     throw new Error(`Invitation email could not be sent to: ${failed.join(", ")}`);
   }
 }
+
+export async function sendPasswordResetEmail(toEmail: string, token: string) {
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:7777";
+  const resetUrl = `${baseUrl}/auth/reset/${token}`;
+
+  try {
+    const { transport, from } = getTransport();
+    const result = await transport.sendMail({
+      to: toEmail,
+      from,
+      subject: "Reset your password - Personal Money Tracker",
+      text: `You requested to reset your password.\n\nUse the link below within 60 minutes:\n${resetUrl}\n\nIf you didn't request this, ignore this message.`,
+      html: `
+        <div style="font-family: sans-serif; line-height:1.6;">
+          <h2>Password Reset</h2>
+          <p>We received a request to reset your password.</p>
+          <p>
+            <a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#0ea5e9;color:#fff;text-decoration:none;border-radius:6px;">
+              Reset Password
+            </a>
+          </p>
+          <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+          <p><a href="${resetUrl}">${resetUrl}</a></p>
+          <p>This link expires in 60 minutes.</p>
+        </div>
+      `,
+    });
+    const failed = result.rejected.filter(Boolean);
+    if (failed.length) {
+      throw new Error(`Password reset email could not be sent to: ${failed.join(", ")}`);
+    }
+  } catch (error) {
+    console.warn(
+      "EMAIL_SERVER/EMAIL_FROM not configured or sending failed. Password reset link:",
+      resetUrl,
+      error instanceof Error ? error.message : error,
+    );
+  }
+}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useThemePreference } from "@/hooks/useThemePreference";
 
 export default function AuthPage() {
@@ -11,6 +12,7 @@ export default function AuthPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { theme, palette, toggleTheme } = useThemePreference();
@@ -154,21 +156,55 @@ export default function AuthPage() {
 
           <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             Password
-            <input
-              type="password"
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
               autoComplete="current-password"
               placeholder="********"
               style={{
-                padding: "12px 14px",
+                padding: "12px 42px 12px 14px",
                 borderRadius: "12px",
                 border: `1px solid ${palette.gridBorder}`,
                 background: palette.inputBg,
                 color: palette.text,
               }}
             />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={palette.subtle}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
           </label>
 
           <button
@@ -188,6 +224,26 @@ export default function AuthPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "14px",
+            color: palette.subtle,
+          }}
+        >
+          <span>Forgot your password?</span>
+          <Link
+            href="/auth/forgot"
+            style={{
+              color: palette.button,
+              textDecoration: "underline",
+            }}
+          >
+            Reset it
+          </Link>
+        </div>
 
         <p style={{ margin: "4px 0 0", color: palette.subtle, fontSize: "14px" }}>
           Need an account? Use the Flutter mobile app to onboard and invite your

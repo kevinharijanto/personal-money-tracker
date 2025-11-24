@@ -9,6 +9,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { verifyPassword } from "@/lib/security";
 
 /**
  * Validate user credentials against Prisma User (email + passwordHash).
@@ -47,12 +48,13 @@ async function authorizeWithPrisma(email: string, password: string) {
   }
 
   // Regular password authentication
-  const user = (await prisma.user.findUnique({ where: { email } })) as any;
+  const normalizedEmail = email.toLowerCase();
+  const user = (await prisma.user.findUnique({ where: { email: normalizedEmail } })) as any;
   if (!user || !user.passwordHash) {
     return null;
   }
 
-  const ok = await bcrypt.compare(password, user.passwordHash);
+  const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     return null;
   }
@@ -82,7 +84,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.toString().trim() ?? "";
+        const email = credentials?.email?.toString().trim().toLowerCase() ?? "";
         const password = credentials?.password?.toString() ?? "";
         if (!email || !password) return null;
         return await authorizeWithPrisma(email, password);
@@ -140,6 +142,6 @@ export const authOptions: NextAuthOptions = {
   },
   // Custom auth pages
   pages: {
-    signIn: "/signin",
+    signIn: "/auth",
   },
 };

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { addCorsHeaders } from "@/lib/cors";
+import bcrypt from "bcryptjs";
 
 // Handle preflight
 export async function OPTIONS(req: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user) {
@@ -37,8 +38,22 @@ export async function POST(req: NextRequest) {
       return addCorsHeaders(res, origin);
     }
 
-    // TODO: verify password here
-    // e.g. bcrypt.compare(password, user.hashedPassword)
+    if (!user.passwordHash) {
+      const res = NextResponse.json(
+        { error: "Account cannot sign in with credentials" },
+        { status: 401 }
+      );
+      return addCorsHeaders(res, origin);
+    }
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      const res = NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+      return addCorsHeaders(res, origin);
+    }
 
     const secret = process.env.NEXTAUTH_SECRET;
     if (!secret) {
