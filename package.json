@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 7777 --webpack",
-    "build": "next build --webpack",
+    "dev": "next dev -p 7777",
+    "build": "next build",
     "start": "next start -p 7777",
     "lint": "eslint",
     "db:copy-sqlite": "tsx scripts/copy-sqlite-to-neon.ts",
@@ -31,6 +31,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
