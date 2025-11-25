@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 import { addCorsHeaders } from "@/lib/cors";
-import bcrypt from "bcryptjs";
+import { verifyPassword } from "@/lib/security";
 export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
       return addCorsHeaders(res, origin);
     }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    // Passwords are stored with a pepper, so use the shared helper to verify.
+    const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
       const res = NextResponse.json(
         { error: "Invalid credentials" },
