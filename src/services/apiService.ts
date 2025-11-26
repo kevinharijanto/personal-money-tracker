@@ -92,3 +92,11 @@ export const accountGroupService = {
     return handleApiResponse(response);
   },
 };
+
+// Transfer services
+export const transferService = {
+  create: async (householdId: string | null, data: any) => {
+    const response = await apiWithHousehold.post("/transfers", householdId, data);
+    return handleApiResponse(response);
+  },
+};

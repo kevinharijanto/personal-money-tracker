@@ -7,7 +7,7 @@ import {
   useHouseholds,
   useTransactions,
 } from "@/hooks/useApi";
-import { transactionService } from "@/services/apiService";
+import { transactionService, transferService } from "@/services/apiService";
 import { useHousehold } from "@/contexts/HouseholdContext";
 import {
   useThemePreference,
@@ -50,6 +50,15 @@ type TransactionPayload = {
   type: "INCOME" | "EXPENSE";
   accountId: string;
   categoryId: string;
+  date?: string;
+  description?: string;
+};
+
+type TransferPayload = {
+  amount: string;
+  fromAccountId: string;
+  toAccountId: string;
+  date?: string;
   description?: string;
 };
 
@@ -217,6 +226,15 @@ export default function Dashboard() {
     }
 
     await transactionService.create(householdId, payload);
+    await Promise.all([refetchGroups(), refetchTransactions()]);
+  };
+
+  const handleTransferSubmit = async (payload: TransferPayload) => {
+    if (!householdId) {
+      throw new Error("Pick a household first.");
+    }
+
+    await transferService.create(householdId, payload);
     await Promise.all([refetchGroups(), refetchTransactions()]);
   };
 
@@ -587,9 +605,11 @@ export default function Dashboard() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         accounts={allAccounts}
+        accountGroups={accountGroups ?? []}
         categories={categories ?? []}
         loading={groupsLoading || categoriesLoading}
-        onSubmit={handleTransactionSubmit}
+        onSubmitTransaction={handleTransactionSubmit}
+        onSubmitTransfer={handleTransferSubmit}
         palette={palette}
       />
     </div>
@@ -1064,29 +1084,42 @@ type TransactionModalProps = {
   open: boolean;
   onClose: () => void;
   accounts: Account[];
+  accountGroups: AccountGroup[];
   categories: Category[];
   loading: boolean;
-  onSubmit: (payload: TransactionPayload) => Promise<void>;
+  onSubmitTransaction: (payload: TransactionPayload) => Promise<void>;
+  onSubmitTransfer: (payload: TransferPayload) => Promise<void>;
   palette: ThemePalette;
 };
 
-type TransactionFormState = TransactionPayload;
+type TransactionFormState = Omit<TransactionPayload, "type"> & {
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
+  fromAccountId: string;
+  toAccountId: string;
+};
+
+const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
 const createDefaultTransactionForm = (): TransactionFormState => ({
   amount: "",
   type: "EXPENSE",
   accountId: "",
   categoryId: "",
+  date: todayInputValue(),
   description: "",
+  fromAccountId: "",
+  toAccountId: "",
 });
 
 function TransactionModal({
   open,
   onClose,
   accounts,
+  accountGroups,
   categories,
   loading,
-  onSubmit,
+  onSubmitTransaction,
+  onSubmitTransfer,
   palette,
 }: TransactionModalProps) {
   const [form, setForm] = useState<TransactionFormState>(() =>
@@ -1095,10 +1128,14 @@ function TransactionModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filteredCategories = useMemo(
-    () => categories.filter((category) => category.type === form.type),
-    [categories, form.type],
-  );
+  const isTransfer = form.type === "TRANSFER";
+
+  const filteredCategories = useMemo(() => {
+    if (isTransfer) {
+      return [];
+    }
+    return categories.filter((category) => category.type === form.type);
+  }, [categories, form.type, isTransfer]);
 
   useEffect(() => {
     if (!open) {
@@ -1112,18 +1149,37 @@ function TransactionModal({
   useEffect(() => {
     if (!open || !accounts.length) return;
     setForm((prev) => {
-      const accountStillVisible = accounts.some(
-        (account) => account.id === prev.accountId,
-      );
-      if (prev.accountId && accountStillVisible) {
-        return prev;
+      const ensureAccount = (value: string | undefined, fallbackIndex = 0) => {
+        if (value && accounts.some((account) => account.id === value)) {
+          return value;
+        }
+        return accounts[Math.min(fallbackIndex, accounts.length - 1)].id;
+      };
+
+      const nextAccountId = ensureAccount(prev.accountId);
+      const nextFromAccountId = ensureAccount(prev.fromAccountId);
+      let nextToAccountId = ensureAccount(prev.toAccountId, Math.min(1, accounts.length - 1));
+
+      if (nextToAccountId === nextFromAccountId && accounts.length > 1) {
+        const alternative = accounts.find(
+          (account) => account.id !== nextFromAccountId,
+        );
+        if (alternative) {
+          nextToAccountId = alternative.id;
+        }
       }
-      return { ...prev, accountId: accounts[0].id };
+
+      return {
+        ...prev,
+        accountId: nextAccountId,
+        fromAccountId: nextFromAccountId,
+        toAccountId: nextToAccountId,
+      };
     });
   }, [accounts, open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isTransfer) return;
     if (!filteredCategories.length) {
       setForm((prev) => ({ ...prev, categoryId: "" }));
       return;
@@ -1137,14 +1193,60 @@ function TransactionModal({
       }
       return { ...prev, categoryId: filteredCategories[0].id };
     });
-  }, [filteredCategories, open]);
+  }, [filteredCategories, open, isTransfer]);
+
+  const groupedAccountOptions = useMemo(
+    () =>
+      accountGroups
+        .filter((group) => group.accounts.length > 0)
+        .map((group) => ({
+          id: group.id,
+          name: group.name,
+          accounts: group.accounts,
+        })),
+    [accountGroups],
+  );
 
   if (!open) return null;
 
+  const renderAccountOptions = () => {
+    if (!accounts.length) {
+      return <option value="">No accounts available</option>;
+    }
+    if (groupedAccountOptions.length === 0) {
+      return accounts.map((account) => (
+        <option key={account.id} value={account.id}>
+          {account.name}
+        </option>
+      ));
+    }
+    return groupedAccountOptions.map((group) => (
+      <optgroup key={group.id} label={group.name}>
+        {group.accounts.map((account) => (
+          <option key={account.id} value={account.id}>
+            {account.name}
+          </option>
+        ))}
+      </optgroup>
+    ));
+  };
+
   const missingAccounts = accounts.length === 0;
-  const missingCategories = filteredCategories.length === 0;
+  const missingCategories = !isTransfer && filteredCategories.length === 0;
+  const insufficientTransferAccounts = isTransfer && accounts.length < 2;
+  const transferSelectionInvalid =
+    isTransfer &&
+    !insufficientTransferAccounts &&
+    (!form.fromAccountId ||
+      !form.toAccountId ||
+      form.fromAccountId === form.toAccountId);
   const submitDisabled =
-    saving || missingAccounts || missingCategories || !form.amount;
+    saving ||
+    missingAccounts ||
+    missingCategories ||
+    !form.amount ||
+    insufficientTransferAccounts ||
+    transferSelectionInvalid;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1152,10 +1254,24 @@ function TransactionModal({
     setSaving(true);
     setError(null);
     try {
-      await onSubmit({
-        ...form,
-        description: form.description?.trim() || undefined,
-      });
+      if (isTransfer) {
+        await onSubmitTransfer({
+          amount: form.amount,
+          fromAccountId: form.fromAccountId,
+          toAccountId: form.toAccountId,
+          description: form.description?.trim() || undefined,
+          date: form.date || undefined,
+        });
+      } else {
+        await onSubmitTransaction({
+          amount: form.amount,
+          type: form.type,
+          accountId: form.accountId,
+          categoryId: form.categoryId,
+          description: form.description?.trim() || undefined,
+          date: form.date || undefined,
+        });
+      }
       setForm(createDefaultTransactionForm());
       onClose();
     } catch (err) {
@@ -1241,6 +1357,149 @@ function TransactionModal({
         )}
 
         <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          Type
+          <select
+            value={form.type}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                type: event.target.value as "INCOME" | "EXPENSE" | "TRANSFER",
+                ...(event.target.value === "TRANSFER" ? { categoryId: "" } : {}),
+              }))
+            }
+            style={{
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: `1px solid ${palette.gridBorder}`,
+              background: palette.inputBg,
+              color: palette.text,
+            }}
+          >
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+            <option value="TRANSFER">Transfer</option>
+          </select>
+        </label>
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          Date
+          <input
+            type="date"
+            value={form.date ?? ""}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, date: event.target.value }))
+            }
+            style={{
+              padding: "10px 12px",
+              borderRadius: "10px",
+              border: `1px solid ${palette.gridBorder}`,
+              background: palette.inputBg,
+              color: palette.text,
+            }}
+          />
+        </label>
+
+        {isTransfer &&
+          insufficientTransferAccounts &&
+          !missingAccounts &&
+          !loading && (
+          <p style={{ margin: 0, color: palette.danger }}>
+            Transfers need at least two accounts. Create another first.
+          </p>
+        )}
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          {!isTransfer ? "Account" : "From account"}
+          {!isTransfer ? (
+            <select
+              value={form.accountId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, accountId: event.target.value }))
+              }
+              disabled={missingAccounts}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            >
+              {renderAccountOptions()}
+            </select>
+          ) : (
+            <select
+              value={form.fromAccountId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, fromAccountId: event.target.value }))
+              }
+              disabled={missingAccounts}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            >
+              {renderAccountOptions()}
+            </select>
+          )}
+        </label>
+
+        {isTransfer && (
+          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            To account
+            <select
+              value={form.toAccountId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, toAccountId: event.target.value }))
+              }
+              disabled={insufficientTransferAccounts}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            >
+              {renderAccountOptions()}
+            </select>
+          </label>
+        )}
+
+        {!isTransfer && (
+          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            Category
+            <select
+              value={form.categoryId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, categoryId: event.target.value }))
+              }
+              disabled={missingCategories}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: `1px solid ${palette.gridBorder}`,
+                background: palette.inputBg,
+                color: palette.text,
+              }}
+            >
+              {filteredCategories.length === 0 ? (
+                <option value="">No categories available</option>
+              ) : (
+                filteredCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </label>
+        )}
+
+        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           Amount
           <input
             type="number"
@@ -1262,85 +1521,6 @@ function TransactionModal({
         </label>
 
         <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          Type
-          <select
-            value={form.type}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                type: event.target.value as "INCOME" | "EXPENSE",
-              }))
-            }
-            style={{
-              padding: "10px 12px",
-              borderRadius: "10px",
-              border: `1px solid ${palette.gridBorder}`,
-              background: palette.inputBg,
-              color: palette.text,
-            }}
-          >
-            <option value="EXPENSE">Expense</option>
-            <option value="INCOME">Income</option>
-          </select>
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          Account
-          <select
-            value={form.accountId}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, accountId: event.target.value }))
-            }
-            disabled={missingAccounts}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "10px",
-              border: `1px solid ${palette.gridBorder}`,
-              background: palette.inputBg,
-              color: palette.text,
-            }}
-          >
-            {accounts.length === 0 ? (
-              <option value="">No accounts available</option>
-            ) : (
-              accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))
-            )}
-          </select>
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          Category
-          <select
-            value={form.categoryId}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, categoryId: event.target.value }))
-            }
-            disabled={missingCategories}
-            style={{
-              padding: "10px 12px",
-              borderRadius: "10px",
-              border: `1px solid ${palette.gridBorder}`,
-              background: palette.inputBg,
-              color: palette.text,
-            }}
-          >
-            {filteredCategories.length === 0 ? (
-              <option value="">No categories available</option>
-            ) : (
-              filteredCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))
-            )}
-          </select>
-        </label>
-
-        <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           Description
           <input
             type="text"
@@ -1358,6 +1538,12 @@ function TransactionModal({
             }}
           />
         </label>
+
+        {isTransfer && transferSelectionInvalid && (
+          <p style={{ color: palette.danger, margin: 0 }}>
+            Pick two different accounts for transfers.
+          </p>
+        )}
 
         {error && (
           <p style={{ color: palette.danger, margin: "6px 0 0" }}>{error}</p>
