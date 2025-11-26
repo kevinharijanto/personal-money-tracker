@@ -1263,14 +1263,15 @@ function TransactionModal({
           date: form.date || undefined,
         });
       } else {
-        await onSubmitTransaction({
+        const payload: TransactionPayload = {
           amount: form.amount,
-          type: form.type,
+          type: form.type as "INCOME" | "EXPENSE",
           accountId: form.accountId,
           categoryId: form.categoryId,
           description: form.description?.trim() || undefined,
           date: form.date || undefined,
-        });
+        };
+        await onSubmitTransaction(payload);
       }
       setForm(createDefaultTransactionForm());
       onClose();
