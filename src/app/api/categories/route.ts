@@ -6,11 +6,11 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
 
-export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string) => {
   const url = new URL(req.url);
   const type = url.searchParams.get("type") as "INCOME" | "EXPENSE" | null;
   
-  const where: any = { householdId };
+  const where: any = { userId };
   if (type) where.type = type;
   
   const categories = await prisma.category.findMany({
@@ -20,7 +20,7 @@ export const GET = withAuthAndTenancy(async (req: Request, userId: string, house
   return NextResponse.json(categories);
 });
 
-export const POST = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+export const POST = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string) => {
   const json = await req.json().catch(() => ({}));
   const parsed = createCategorySchema.safeParse(json);
   if (!parsed.success) {
@@ -32,14 +32,14 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
       data: {
         name: parsed.data.name,
         type: parsed.data.type,
-        householdId,
+        userId,
       },
     });
     return NextResponse.json(category, { status: 201 });
   } catch (err: any) {
     if (err?.code === "P2002") {
       return NextResponse.json(
-        { error: "Category name already exists in this household" },
+        { error: "Category name already exists for this user" },
         { status: 409 }
       );
     }
@@ -47,7 +47,7 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
   }
 });
 
-export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string) => {
   // OPTIONS handler for CORS preflight requests
   const origin = req.headers.get('origin');
   const response = new NextResponse(null, { status: 200 });

@@ -8,18 +8,18 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
 
-async function getOrCreateTransferCategory(householdId: string) {
+async function getOrCreateTransferCategory(userId: string) {
   const name = "Transfer";
   const type = "EXPENSE"; // Transfers are typically categorized as expenses
   const found = await prisma.category.findFirst({
-    where: { householdId, name, type },
+    where: { userId, name, type },
   });
   if (found) return found;
   return prisma.category.create({
     data: {
       name,
       type,
-      householdId,
+      userId,
     } as any,
   });
 }
@@ -72,13 +72,13 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
     return NextResponse.json({ error: "Accounts must belong to the same group" }, { status: 400 });
   }
 
-  // get a category (use caller-provided or ensure "Transfer" exists) within this household
+  // get a category (use caller-provided or ensure "Transfer" exists) for this user
   const cat =
     categoryId
-      ? await prisma.category.findFirst({ where: { id: categoryId, householdId } })
-      : await getOrCreateTransferCategory(householdId);
+      ? await prisma.category.findFirst({ where: { id: categoryId, userId } })
+      : await getOrCreateTransferCategory(userId);
   if (!cat) {
-    return NextResponse.json({ error: "Invalid categoryId for this household" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid categoryId for this user" }, { status: 400 });
   }
 
   const when = date ? new Date(date) : undefined;

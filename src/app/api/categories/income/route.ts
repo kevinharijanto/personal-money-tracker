@@ -5,10 +5,10 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
 
-export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string) => {
   const incomeCategories = await prisma.category.findMany({
     where: { 
-      householdId,
+      userId,
       type: "INCOME"
     },
     orderBy: { name: "asc" },
@@ -16,7 +16,7 @@ export const GET = withAuthAndTenancy(async (req: Request, userId: string, house
   return NextResponse.json(incomeCategories);
 });
 
-export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string) => {
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string) => {
   // OPTIONS handler for CORS preflight requests
   const origin = req.headers.get('origin');
   const response = new NextResponse(null, { status: 200 });

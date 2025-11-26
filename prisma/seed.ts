@@ -157,32 +157,68 @@ async function seedData() {
     },
   });
 
-  // Create categories
-  const categorySalary = await prisma.category.create({
+  // Create categories (per user)
+  const ownerCategorySalary = await prisma.category.create({
     data: {
       name: "Salary",
-      householdId: household.id,
+      type: "INCOME",
+      userId: owner.id,
     },
   });
 
-  const categoryFood = await prisma.category.create({
+  const ownerCategoryFood = await prisma.category.create({
     data: {
       name: "Food",
-      householdId: household.id,
+      type: "EXPENSE",
+      userId: owner.id,
     },
   });
 
-  const categoryTransport = await prisma.category.create({
+  const ownerCategoryTransport = await prisma.category.create({
     data: {
       name: "Transport",
-      householdId: household.id,
+      type: "EXPENSE",
+      userId: owner.id,
     },
   });
 
-  const categoryEntertainment = await prisma.category.create({
+  const ownerCategoryEntertainment = await prisma.category.create({
     data: {
       name: "Entertainment",
-      householdId: household.id,
+      type: "EXPENSE",
+      userId: owner.id,
+    },
+  });
+
+  const memberCategorySalary = await prisma.category.create({
+    data: {
+      name: "Salary",
+      type: "INCOME",
+      userId: member.id,
+    },
+  });
+
+  const memberCategoryFood = await prisma.category.create({
+    data: {
+      name: "Food",
+      type: "EXPENSE",
+      userId: member.id,
+    },
+  });
+
+  const memberCategoryTransport = await prisma.category.create({
+    data: {
+      name: "Transport",
+      type: "EXPENSE",
+      userId: member.id,
+    },
+  });
+
+  const memberCategoryEntertainment = await prisma.category.create({
+    data: {
+      name: "Entertainment",
+      type: "EXPENSE",
+      userId: member.id,
     },
   });
 
@@ -193,7 +229,7 @@ async function seedData() {
         amount: "10000000",
         type: "INCOME",
         accountId: ownerBankAccount.id,
-        categoryId: categorySalary.id,
+        categoryId: ownerCategorySalary.id,
         description: "Owner's monthly salary",
         date: new Date("2024-01-01"),
       },
@@ -201,7 +237,7 @@ async function seedData() {
         amount: "75000",
         type: "EXPENSE",
         accountId: ownerWallet.id,
-        categoryId: categoryFood.id,
+        categoryId: ownerCategoryFood.id,
         description: "Owner's lunch",
         date: new Date("2024-01-02"),
       },
@@ -209,7 +245,7 @@ async function seedData() {
         amount: "25000",
         type: "EXPENSE",
         accountId: ownerWallet.id,
-        categoryId: categoryTransport.id,
+        categoryId: ownerCategoryTransport.id,
         description: "Owner's bus fare",
         date: new Date("2024-01-03"),
       },
@@ -217,7 +253,7 @@ async function seedData() {
         amount: "150000",
         type: "EXPENSE",
         accountId: ownerBankAccount.id,
-        categoryId: categoryEntertainment.id,
+        categoryId: ownerCategoryEntertainment.id,
         description: "Owner's movie tickets",
         date: new Date("2024-01-04"),
       },
@@ -231,7 +267,7 @@ async function seedData() {
         amount: "5000000",
         type: "INCOME",
         accountId: memberEWallet.id,
-        categoryId: categorySalary.id,
+        categoryId: memberCategorySalary.id,
         description: "Member's monthly salary",
         date: new Date("2024-01-01"),
       },
@@ -239,7 +275,7 @@ async function seedData() {
         amount: "35000",
         type: "EXPENSE",
         accountId: memberWallet.id,
-        categoryId: categoryFood.id,
+        categoryId: memberCategoryFood.id,
         description: "Member's breakfast",
         date: new Date("2024-01-02"),
       },
@@ -247,7 +283,7 @@ async function seedData() {
         amount: "50000",
         type: "EXPENSE",
         accountId: memberEWallet.id,
-        categoryId: categoryTransport.id,
+        categoryId: memberCategoryTransport.id,
         description: "Member's ride-sharing",
         date: new Date("2024-01-03"),
       },
@@ -255,7 +291,7 @@ async function seedData() {
         amount: "75000",
         type: "EXPENSE",
         accountId: memberEWallet.id,
-        categoryId: categoryEntertainment.id,
+        categoryId: memberCategoryEntertainment.id,
         description: "Member's gaming subscription",
         date: new Date("2024-01-05"),
       },
@@ -269,7 +305,7 @@ async function seedData() {
         amount: "1000000",
         type: "INCOME",
         accountId: householdCash.id,
-        categoryId: categorySalary.id,
+        categoryId: ownerCategorySalary.id,
         description: "Household bonus",
         date: new Date("2024-01-01"),
       },
@@ -277,7 +313,7 @@ async function seedData() {
         amount: "500000",
         type: "EXPENSE",
         accountId: householdCash.id,
-        categoryId: categoryFood.id,
+        categoryId: ownerCategoryFood.id,
         description: "Grocery shopping",
         date: new Date("2024-01-06"),
       },

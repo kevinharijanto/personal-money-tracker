@@ -6,14 +6,14 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "sin1";
 
 
-export const GET = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+export const GET = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const category = await prisma.category.findFirst({ where: { id, householdId } });
+  const category = await prisma.category.findFirst({ where: { id, userId } });
   if (!category) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json(category);
 });
 
-export const PUT = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+export const PUT = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const json = await req.json().catch(() => ({}));
   const parsed = createCategorySchema.safeParse(json);
@@ -21,7 +21,7 @@ export const PUT = withAuthAndTenancy(async (req: Request, userId: string, house
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const existing = await prisma.category.findFirst({ where: { id, householdId } });
+  const existing = await prisma.category.findFirst({ where: { id, userId } });
   if (!existing) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -38,7 +38,7 @@ export const PUT = withAuthAndTenancy(async (req: Request, userId: string, house
   } catch (err: any) {
     if (err?.code === "P2002") {
       return NextResponse.json(
-        { error: "Category name already exists in this household" },
+        { error: "Category name already exists for this user" },
         { status: 409 }
       );
     }
@@ -46,9 +46,9 @@ export const PUT = withAuthAndTenancy(async (req: Request, userId: string, house
   }
 });
 
-export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const existing = await prisma.category.findFirst({ where: { id, householdId } });
+  const existing = await prisma.category.findFirst({ where: { id, userId } });
   if (!existing) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
@@ -57,7 +57,7 @@ export const DELETE = withAuthAndTenancy(async (req: Request, userId: string, ho
   return NextResponse.json({ ok: true });
 });
 
-export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, householdId: string, { params }: { params: Promise<{ id: string }> }) => {
+export const OPTIONS = withAuthAndTenancy(async (req: Request, userId: string, _householdId: string, { params }: { params: Promise<{ id: string }> }) => {
   // OPTIONS handler for CORS preflight requests
   const origin = req.headers.get('origin');
   const response = new NextResponse(null, { status: 200 });

@@ -408,8 +408,8 @@ export const CacheInvalidation = {
   /**
    * Invalidate category-related cache
    */
-  invalidateCategories: (householdId: string): number => {
-    return CacheUtils.invalidateByTag(`categories:${householdId}`);
+  invalidateCategories: (userId: string): number => {
+    return CacheUtils.invalidateByTag(`categories:${userId}`);
   },
 };
 

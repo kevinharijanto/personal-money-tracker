@@ -13,7 +13,6 @@ model Household {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   accountGroups  AccountGroup[]
-  categories     Category[]
   invitations    Invitation[]
   memberships    Membership[]
   transferGroups TransferGroup[]
@@ -32,6 +31,7 @@ model User {
   createdAccounts Account[]      @relation("AccountCreator")
   ownedAccounts   Account[]      @relation("AccountOwner")
   invitationsSent Invitation[]   @relation("InvitationsSent")
+  categories      Category[]
   memberships     Membership[]
   authAccounts    AuthAccount[]
   sessions        Session[]
@@ -111,13 +111,13 @@ model Category {
   id          String         @id @default(cuid())
   name        String
   type        CategoryType   @default(EXPENSE)
-  householdId String
+  userId      String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   txns        Transaction[]
-  @@unique([householdId, name, type])
-  @@index([householdId])
+  @@unique([userId, name, type])
+  @@index([userId])
   @@index([type])
 }
 

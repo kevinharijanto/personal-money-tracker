@@ -131,7 +131,7 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
       include: { group: true },
     }),
     prisma.category.findFirst({
-      where: { id: categoryId, householdId },
+      where: { id: categoryId, userId },
     }),
   ]);
 
@@ -143,7 +143,7 @@ export const POST = withAuthAndTenancy(async (req: Request, userId: string, hous
   }
 
   if (!category) {
-    return NextResponse.json({ error: "Category not found in this household" }, { status: 400 });
+    return NextResponse.json({ error: "Category not found for this user" }, { status: 400 });
   }
 
   // Validate category type matches transaction type

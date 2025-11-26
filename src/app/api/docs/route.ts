@@ -258,7 +258,7 @@ docsGenerator.register({
   path: '/api/categories',
   method: 'GET',
   summary: 'Get categories',
-  description: 'Retrieve categories for the authenticated user\'s household',
+  description: 'Retrieve categories for the authenticated user',
   tags: ['Categories'],
   parameters: [
     {
@@ -279,7 +279,7 @@ docsGenerator.register({
             id: 'cat_123',
             name: 'Groceries',
             type: 'EXPENSE',
-            householdId: 'household_123',
+            userId: 'user_123',
           },
         ],
         meta: {
@@ -298,7 +298,7 @@ docsGenerator.register({
   path: '/api/categories',
   method: 'POST',
   summary: 'Create category',
-  description: 'Create a new category in the household',
+  description: 'Create a new category for the authenticated user',
   tags: ['Categories'],
   requestBody: {
     description: 'Category data',
@@ -319,7 +319,7 @@ docsGenerator.register({
           id: 'cat_456',
           name: 'Entertainment',
           type: 'EXPENSE',
-          householdId: 'household_123',
+          userId: 'user_123',
         },
         meta: {
           timestamp: '2023-01-01T00:00:00.000Z',
@@ -330,12 +330,12 @@ docsGenerator.register({
     '401': { $ref: '#/components/responses/Unauthorized' },
     '403': { $ref: '#/components/responses/Forbidden' },
     '409': {
-      description: 'Category name already exists in this household',
+      description: 'Category name already exists for this user',
       example: {
         success: false,
         error: {
           code: 'CONFLICT',
-          message: 'Category name already exists in this household',
+          message: 'Category name already exists for this user',
         },
         meta: {
           timestamp: '2023-01-01T00:00:00.000Z',

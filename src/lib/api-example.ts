@@ -143,13 +143,13 @@ export const POST = withRateLimit(
               throw new Error('Account not found or not accessible');
             }
 
-            // Validate category belongs to household
+            // Validate category belongs to user
             const category = await tx.category.findFirst({
-              where: { id: categoryId, householdId },
+              where: { id: categoryId, userId },
             });
 
             if (!category) {
-              throw new Error('Category not found in this household');
+              throw new Error('Category not found for this user');
             }
 
             // Validate category type matches transaction type

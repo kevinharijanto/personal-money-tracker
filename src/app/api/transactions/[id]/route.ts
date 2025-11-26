@@ -112,10 +112,10 @@ export const PUT = withAuthAndTenancy(async (req: Request, userId: string, house
   // If changing category, enforce household tenancy
   if (parsed.data.categoryId !== undefined) {
     const categoryOk = await prisma.category.findFirst({
-      where: { id: parsed.data.categoryId, householdId },
+      where: { id: parsed.data.categoryId, userId },
     });
     if (!categoryOk) {
-      return NextResponse.json({ error: "Category not found in this household" }, { status: 400 });
+      return NextResponse.json({ error: "Category not found for this user" }, { status: 400 });
     }
     data.categoryId = parsed.data.categoryId;
   }
